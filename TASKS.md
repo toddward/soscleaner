@@ -63,7 +63,7 @@
 
 ---
 
-## Phase 2: Dependency Updates
+## Phase 2: Dependency Updates ✅ COMPLETED
 
 ### 2.1 Update setup.py Dependencies ✅
 **File:** `setup.py`
@@ -73,77 +73,74 @@
 - [x] Remove `configparser>=4,<5` from `install_requires`
 - [x] Add `python_requires='>=3.8'`
 
-### 2.2 Update requirements.txt
+### 2.2 Update requirements.txt ✅
 **File:** `requirements.txt`
 
-- [ ] Remove `ipaddr`
-- [ ] Remove `nose`
-- [ ] Remove `simplejson`
-- [ ] Remove `bumpversion`
-- [ ] Add `pytest>=7.0`
-- [ ] Add `pytest-cov>=4.0`
-- [ ] Keep `coveralls`
+- [x] Remove `ipaddr`
+- [x] Remove `nose`
+- [x] Remove `simplejson`
+- [x] Remove `bumpversion`
+- [x] Add `pytest>=7.0`
+- [x] Add `pytest-cov>=4.0`
+- [x] Keep `coveralls`
 
-### 2.3 Create requirements-dev.txt (optional)
+### 2.3 Create requirements-dev.txt ✅
 **File:** `requirements-dev.txt` (new)
 
-- [ ] Add `bump2version`
-- [ ] Add `mkdocs` or Sphinx dependencies
-- [ ] Add `build` for package building
+- [x] Add `bump2version`
+- [x] Add `mkdocs` or Sphinx dependencies
+- [x] Add `build` for package building
 
 ---
 
-## Phase 3: Test Framework Migration (nose → pytest)
+## Phase 3: Test Framework Migration (nose → pytest) ✅ COMPLETED
 
-### 3.1 Convert Test Class to pytest
-**File:** `test_soscleaner.py`
+### 3.1 Convert Test Class to pytest ✅
+**File:** `tests/test_soscleaner.py`
 
-- [ ] Keep `unittest.TestCase` (pytest supports it) OR convert to pytest style
-- [ ] Replace assertions (if converting fully):
-  - [ ] `self.assertEqual(a, b)` → `assert a == b`
-  - [ ] `self.assertTrue(x)` → `assert x`
-  - [ ] `self.assertFalse(x)` → `assert not x`
-  - [ ] `self.assertIn(a, b)` → `assert a in b`
-  - [ ] `self.assertIsNone(x)` → `assert x is None`
-  - [ ] `self.assertRaises()` → `pytest.raises()`
-- [ ] Convert `setUp`/`tearDown` to pytest fixtures (optional)
+- [x] Keep `unittest.TestCase` (pytest supports it) - kept existing style, all 75 tests pass
+- [N/A] Replace assertions (if converting fully) - not needed, unittest.TestCase works with pytest
+- [N/A] Convert `setUp`/`tearDown` to pytest fixtures - not needed, current approach works
 
 ### 3.2 Update Test Imports ✅
-**File:** `test_soscleaner.py`
+**File:** `tests/test_soscleaner.py`
 
 - [x] Update `from ipaddr import ...` to `from ipaddress import ...`
 - [x] Remove `sys.path.append('soscleaner/')` hack
-- [ ] Update import to `from soscleaner.soscleaner import SOSCleaner` (current import works)
+- [x] Update import to `from soscleaner.soscleaner import SOSCleaner`
 
-### 3.3 Move Test File
-- [ ] Create `tests/` directory
-- [ ] Move `test_soscleaner.py` to `tests/test_soscleaner.py`
-- [ ] Create `tests/__init__.py`
+### 3.3 Move Test File ✅
+- [x] Create `tests/` directory
+- [x] Move `test_soscleaner.py` to `tests/test_soscleaner.py`
+- [x] Create `tests/__init__.py`
+- [x] Create `soscleaner/__init__.py` (needed for proper package imports)
 
 ---
 
-## Phase 4: Modern Packaging (pyproject.toml)
+## Phase 4: Modern Packaging (pyproject.toml) ✅ COMPLETED
 
-### 4.1 Create pyproject.toml
+### 4.1 Create pyproject.toml ✅
 **File:** `pyproject.toml` (new)
 
-- [ ] Define `[build-system]` with setuptools
-- [ ] Define `[project]` metadata (name, version, description, etc.)
-- [ ] Set `requires-python = ">=3.8"`
-- [ ] Define `[project.scripts]` entry point for CLI
-- [ ] Define `[project.optional-dependencies]` for dev/test
-- [ ] Configure `[tool.pytest.ini_options]`
-- [ ] Configure `[tool.coverage.run]` and `[tool.coverage.report]`
+- [x] Define `[build-system]` with setuptools
+- [x] Define `[project]` metadata (name, version, description, etc.)
+- [x] Set `requires-python = ">=3.8"`
+- [x] Define `[project.scripts]` entry point for CLI
+- [x] Define `[project.optional-dependencies]` for dev/test
+- [x] Configure `[tool.pytest.ini_options]`
+- [x] Configure `[tool.coverage.run]` and `[tool.coverage.report]`
+- [x] Configure `[tool.bumpversion]` (migrated from setup.cfg)
 
-### 4.2 Update Package Structure
-- [ ] Ensure `soscleaner/soscleaner.py` exports properly
-- [ ] Consider adding `soscleaner/__init__.py` with version and imports
-- [ ] Add `__main__.py` for `python -m soscleaner` support (optional)
+### 4.2 Update Package Structure ✅
+- [x] Ensure `soscleaner/soscleaner.py` exports properly
+- [x] Add `soscleaner/__init__.py` with version and imports
+- [x] Add `soscleaner/__main__.py` for `python -m soscleaner` support
+- [x] Create `soscleaner/cli.py` with CLI logic (moved from scripts/soscleaner)
 
-### 4.3 Clean Up Old Config Files
-- [ ] Remove or minimize `setup.py` (keep shim if needed)
-- [ ] Migrate `setup.cfg` bumpversion config or remove
-- [ ] Remove `.coveragerc` (migrated to pyproject.toml)
+### 4.3 Clean Up Old Config Files ✅
+- [x] Minimize `setup.py` (kept as shim for backward compatibility)
+- [x] Migrate `setup.cfg` bumpversion config to pyproject.toml
+- [x] Remove `.coveragerc` (migrated to pyproject.toml)
 
 ---
 
