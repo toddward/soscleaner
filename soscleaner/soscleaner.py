@@ -19,9 +19,6 @@
 # Created By : Jamie Duncan
 # Purpose : an sosreport and data set obfuscation tool
 
-from builtins import str
-from builtins import range
-from builtins import object
 import os
 import hashlib
 import re
@@ -33,14 +30,14 @@ import shutil
 import tempfile
 import logging
 import tarfile
-from ipaddr import IPv4Network, IPv4Address, IPv6Network, IPv6Address
+from ipaddress import IPv4Network, IPv4Address, IPv6Network, IPv6Address
 
 from random import randint
 import configparser
 import subprocess
 
 
-class SOSCleaner(object):
+class SOSCleaner:
     """
     A class to parse through an sosreport or generic dataset to begin the
     cleaning and obfuscation process required in many industries.
@@ -73,8 +70,8 @@ class SOSCleaner(object):
         self.net_count = 0
         self.net_metadata = dict()
 
-        self.net_metadata[self.default_net.network.compressed] = dict()
-        self.net_metadata[self.default_net.network.compressed]['host_count'] = 0
+        self.net_metadata[self.default_net.network_address.compressed] = dict()
+        self.net_metadata[self.default_net.network_address.compressed]['host_count'] = 0
 
         # Hostname obfuscation information
         self.hn_db = dict()  # hostname database
@@ -227,7 +224,7 @@ class SOSCleaner(object):
     def _extract_file_data(self, filename):
         """Extracts data from a file and return the data"""
         try:
-            fh = open(filename, 'r')
+            fh = open(filename, 'r', encoding='utf-8')
             data = fh.readlines()
             fh.close()
 
@@ -254,9 +251,8 @@ class SOSCleaner(object):
             hack around it.
             """
             try:
-                command = "file %s" % filename
-                filetype = os.popen(command).read().strip(
-                    '\n').split(':')[1].strip().lower()
+                result = subprocess.run(['file', filename], capture_output=True, text=True)
+                filetype = result.stdout.strip('\n').split(':')[1].strip().lower()
                 if 'text' in filetype:
                     return True
                 else:
@@ -351,9 +347,8 @@ class SOSCleaner(object):
                 distribution's builds of python-magic. Until it stabilizes, I'm just going to hack around it.
                 """
                 self.sosreport_filename = filename
-                command = "file %s" % filename
-                compression_type = os.popen(command).read().strip(
-                    '\n').split(':')[1].strip().lower()
+                result = subprocess.run(['file', filename], capture_output=True, text=True)
+                compression_type = result.stdout.strip('\n').split(':')[1].strip().lower()
                 return compression_type
 
             except Exception as e:  # pragma: no cover
@@ -442,7 +437,7 @@ class SOSCleaner(object):
         try:
             if self.user_count > 0:    # we have obfuscated keywords to work with
                 for user, o_user in list(self.user_db.items()):
-                    line = re.sub(r'\b%s\b(?i)' % user, o_user, line)
+                    line = re.sub(r'(?i)\b%s\b' % user, o_user, line)
                     self.logger.debug(
                             "Obfuscating User - %s > %s", user, o_user)
 
@@ -601,7 +596,7 @@ class SOSCleaner(object):
                 self.report_dir, "%s-mac.csv" % self.session)
             self.logger.con_out(
                 'Creating MAC address Report - %s', mac_report_name)
-            mac_report = open(mac_report_name, 'w')
+            mac_report = open(mac_report_name, 'w', encoding='utf-8')
             mac_report.write('Original MAC Address,Obfuscated MAC Address\n')
             if len(self.mac_db) > 0:
                 for k, v in list(self.mac_db.items()):
@@ -626,7 +621,7 @@ class SOSCleaner(object):
                 self.report_dir, "%s-keyword.csv" % self.session)
             self.logger.con_out(
                 'Creating keyword address Report - %s', kw_report_name)
-            kw_report = open(kw_report_name, 'w')
+            kw_report = open(kw_report_name, 'w', encoding='utf-8')
             kw_report.write('Original Keyword,Obfuscated Keyword\n')
             if self.kw_count > 0:
                 for keyword, o_keyword in list(self.kw_db.items()):
@@ -652,7 +647,7 @@ class SOSCleaner(object):
                 self.report_dir, "%s-username.csv" % self.session)
             self.logger.con_out(
                 'Creating Username Report - %s', un_report_name)
-            un_report = open(un_report_name, 'w')
+            un_report = open(un_report_name, 'w', encoding='utf-8')
             un_report.write('Original Username,Obfuscated Username\n')
             for k, v in list(self.user_db.items()):
                 un_report.write('%s,%s\n' % (k, v))
@@ -672,7 +667,7 @@ class SOSCleaner(object):
                 self.report_dir, "%s-hostname.csv" % self.session)
             self.logger.con_out(
                 'Creating Hostname Report - %s', hn_report_name)
-            hn_report = open(hn_report_name, 'w')
+            hn_report = open(hn_report_name, 'w', encoding='utf-8')
             hn_report.write('Original Hostname,Obfuscated Hostname\n')
             if self.hostname_count > 0:
                 for k, v in list(self.hn_db.items()):
@@ -696,7 +691,7 @@ class SOSCleaner(object):
                 self.report_dir, "%s-dn.csv" % self.session)
             self.logger.con_out(
                 'Creating Domainname Report - %s', dn_report_name)
-            dn_report = open(dn_report_name, 'w')
+            dn_report = open(dn_report_name, 'w', encoding='utf-8')
             dn_report.write('Original Domain,Obfuscated Domain\n')
             if self.domain_count > 0:
                 for domain, o_domain in list(self.dn_db.items()):
@@ -720,7 +715,7 @@ class SOSCleaner(object):
             ip_report_name = os.path.join(
                 self.report_dir, "%s-ip.csv" % self.session)
             self.logger.con_out('Creating IP Report - %s', ip_report_name)
-            ip_report = open(ip_report_name, 'w')
+            ip_report = open(ip_report_name, 'w', encoding='utf-8')
             ip_report.write('Original IP,Obfuscated IP\n')
             for i in self.ip_db:
                 ip_report.write('%s,%s\n' % (i[0], i[1]))
@@ -741,7 +736,7 @@ class SOSCleaner(object):
             sos_report_name = os.path.join(
                 self.report_dir, "%s-sosreport.csv" % self.session)
             self.logger.con_out('Creating sosreport Report - %s', sos_report_name)
-            sos_report = open(sos_report_name, 'w')
+            sos_report = open(sos_report_name, 'w', encoding='utf-8')
             sos_report.write('Original Sosreport,Obfuscated Sosreport\n')
             sos_report.write('%s,%s.tar.gz\n' % (self.sosreport_filename, self.session))
             sos_report.close()
@@ -850,7 +845,7 @@ class SOSCleaner(object):
 
         try:
             hostfile = os.path.join(self.dir_path, hostname)
-            fh = open(hostfile, 'r')
+            fh = open(hostfile, 'r', encoding='utf-8')
             name_list = fh.readline().rstrip().split('.')
             hostname = name_list[0]
             if len(name_list) > 1:
@@ -972,14 +967,14 @@ class SOSCleaner(object):
                 # we care about, we regex it out of the line.
                 if domain_found:
                     o_hostname = self._hn2db(hostname)
-                    line = re.sub(r'\b%s\b(?i)' % hostname, o_hostname, line)
+                    line = re.sub(r'(?i)\b%s\b' % hostname, o_hostname, line)
 
             # Now that the hard work is done, we account for the handful of
             # single-word "short domains" that we care about. We start with
             # the hostname.
             if self.hostname is not None:
                 o_host = self._hn2db(self.hostname)
-                line = re.sub(r'\b%s\b(?i)' % self.hostname, o_host, line)
+                line = re.sub(r'(?i)\b%s\b' % self.hostname, o_host, line)
 
             # There are a handful of short domains that we want to obfuscate
             # Things like 'localhost' and 'localdomain'
@@ -988,7 +983,7 @@ class SOSCleaner(object):
             # they're only 1 word, so we handle them here.
             for domain in self.short_domains:
                 o_host = self._hn2db(domain)
-                line = re.sub(r'\b%s\b(?i)' % domain, o_host, line)
+                line = re.sub(r'(?i)\b%s\b' % domain, o_host, line)
 
             return line
 
@@ -1041,7 +1036,7 @@ class SOSCleaner(object):
          the obfuscated file in the same location
          """
         if os.path.exists(f) and not os.path.islink(f):
-            tmp_file = tempfile.TemporaryFile()
+            tmp_file = tempfile.TemporaryFile(mode='w+', encoding='utf-8')
             try:
                 data = self._extract_file_data(f)
                 if len(data) > 0:  # if the file isn't empty:
@@ -1059,7 +1054,7 @@ class SOSCleaner(object):
 
             try:
                 if len(data) > 0:
-                    new_fh = open(f, 'w')
+                    new_fh = open(f, 'w', encoding='utf-8')
                     for line in tmp_file:
                         new_fh.write(line)
                     new_fh.close()
@@ -1185,7 +1180,7 @@ class SOSCleaner(object):
         checksum = hashlib.md5(open(soscleaner_archive, 'rb').read()).hexdigest()
 
         soscleaner_archive_hash = soscleaner_archive + ".md5"
-        fp = open(soscleaner_archive_hash, "w")
+        fp = open(soscleaner_archive_hash, "w", encoding='utf-8')
         fp.write(checksum + "\n")
         self.logger.con_out('md5 checksum is: %s' % checksum)
         fp.close()
@@ -1268,7 +1263,7 @@ class SOSCleaner(object):
             if len(self.keywords_file) > 0:
                 for f in self.keywords_file:
                     if os.path.isfile(f):
-                        with open(f, 'r') as klist:
+                        with open(f, 'r', encoding='utf-8') as klist:
                             for keyword in klist.readlines():
                                 keyword = keyword.rstrip()
                                 if len(keyword) > 1:
@@ -1329,7 +1324,7 @@ class SOSCleaner(object):
         try:
             route_path = os.path.join(self.dir_path, 'route')
             if os.path.exists(route_path):
-                fh = open(route_path, 'r')
+                fh = open(route_path, 'r', encoding='utf-8')
                 self.logger.info(
                     "Found route file. Auto-adding routed networks.")
                 # skip the first 2 header lines and get down to the data
@@ -1355,7 +1350,7 @@ class SOSCleaner(object):
         try:
             # this is going to get hacky
             # this will return an IPv4Address object that is 129.0.0.0
-            start_point = self.default_net.broadcast + 1
+            start_point = self.default_net.broadcast_address + 1
             x = start_point.compressed.split('.')  # break it apart
             # calculate the new first octet
             new_octet = str(int(x[0]) + self.net_count)
@@ -1378,7 +1373,7 @@ class SOSCleaner(object):
         value for the subnet mask that is used to create the obfuscated network
         """
         try:
-            net = IPv4Network(network)
+            net = IPv4Network(network, strict=False)
             subnet = str(net.prefixlen)
 
             return net, subnet
@@ -1443,10 +1438,10 @@ class SOSCleaner(object):
                 self.logger.con_out(
                     "Created New Obfuscated Network - %s" % new_net.with_prefixlen)
 
-                self.net_metadata[new_net.network.compressed] = dict()
+                self.net_metadata[new_net.network_address.compressed] = dict()
                 self.logger.info(
                     "Adding Entry to Network Metadata Database - %s" % new_net.with_prefixlen)
-                self.net_metadata[new_net.network.compressed]['host_count'] = 0
+                self.net_metadata[new_net.network_address.compressed]['host_count'] = 0
             else:
                 self.logger.info(
                     "Network already exists in database. Not obfuscating. - %s" % network)
@@ -1464,11 +1459,11 @@ class SOSCleaner(object):
         """
         try:
             ip = IPv4Address(ip)    # re-cast as an IPv4 object
-            network = self.default_net.network
+            network = self.default_net.network_address
             for net in self.net_db:
                 if ip in net[0]:
                     # we have a match! We'll return the proper obfuscated network
-                    network = net[1].network
+                    network = net[1].network_address
 
             return network
 

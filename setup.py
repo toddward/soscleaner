@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (C) 2013  Jamie Duncan (jduncan@redhat.com)
 
 # This program is free software; you can redistribute it and/or
@@ -32,11 +32,8 @@ setup(
     maintainer='Jamie Duncan',
     maintainer_email='jduncan@redhat.com',
     long_description='%s is an application to help obfuscate sensitive data from a standard sosreport' % name,
-    install_requires=[
-        'ipaddr',
-        'future',
-        'configparser>=4,<5',
-    ],
+    install_requires=[],
+    python_requires='>=3.8',
     package_dir={'': 'soscleaner'},
     test_suite='test_soscleaner',
     py_modules=['soscleaner'],

@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: iso-8859-15 -*-
+#!/usr/bin/env python3
 # Copyright (C) 2014  Jamie Duncan (jamie.e.duncan@gmail.com)
 
 # This program is free software; you can redistribute it and/or
@@ -21,13 +20,11 @@
 # Created By : Jamie Duncan
 # Purpose : SOSCleaner unittests
 
-from ipaddr import IPv4Network, IPv4Address, IPv6Network, IPv6Address
+from ipaddress import IPv4Network, IPv4Address, IPv6Network, IPv6Address
 import shutil
 import os
 from soscleaner import SOSCleaner
 import unittest
-import sys
-sys.path.append('soscleaner/')
 
 
 class SOSCleanerTests(unittest.TestCase):
@@ -36,7 +33,7 @@ class SOSCleanerTests(unittest.TestCase):
         if remove:
             os.remove(hostname_f)
             return True
-        fh = open(hostname_f, 'w')
+        fh = open(hostname_f, 'w', encoding='utf-8')
         if t == 'non-fqdn':
             fh.write('myhost\n')
         else:
@@ -48,7 +45,7 @@ class SOSCleanerTests(unittest.TestCase):
         if remove:
             os.remove(hostname_f)
             return True
-        fh = open(hostname_f, 'w')
+        fh = open(hostname_f, 'w', encoding='utf-8')
         if t == 'non-fqdn':
             fh.write('myhost2\n')
         else:
@@ -209,7 +206,7 @@ class SOSCleanerTests(unittest.TestCase):
         self.cleaner.process_hostnames = True
         test_o_hn = self.cleaner._hn2db(test_hn)
         self.cleaner._create_hn_report()
-        fh = open(self.cleaner.hn_report, 'r')
+        fh = open(self.cleaner.hn_report, 'r', encoding='utf-8')
         x = fh.readlines()
         self.assertTrue(test_hn in x[1])
         self.assertTrue(test_o_hn in x[1])
@@ -217,7 +214,7 @@ class SOSCleanerTests(unittest.TestCase):
     def test19_create_hn_report_nohn(self):
         self.cleaner.process_hostnames = False
         self.cleaner._create_hn_report()
-        fh = open(self.cleaner.hn_report, 'r')
+        fh = open(self.cleaner.hn_report, 'r', encoding='utf-8')
         lines = fh.readlines()
         self.assertTrue(lines[1] == 'None,None\n')
 
@@ -226,13 +223,13 @@ class SOSCleanerTests(unittest.TestCase):
         self.cleaner.domains.append('myserver.com')
         self.cleaner._domains2db()
         self.cleaner._create_dn_report()
-        fh = open(self.cleaner.dn_report, 'r')
+        fh = open(self.cleaner.dn_report, 'r', encoding='utf-8')
         x = fh.readlines()
         self.assertTrue(self.cleaner.domainname in x[1])
 
     def test21_create_dn_report_none(self):
         self.cleaner._create_dn_report()
-        fh = open(self.cleaner.dn_report, 'r')
+        fh = open(self.cleaner.dn_report, 'r', encoding='utf-8')
         x = fh.readlines()
         self.assertTrue(x[1] == 'None,None\n')
 
@@ -245,7 +242,7 @@ class SOSCleanerTests(unittest.TestCase):
         self.cleaner.hostname = 'myhost'
         self.cleaner._domains2db()
         self.cleaner._clean_file(test_file)
-        fh = open(test_file, 'r')
+        fh = open(test_file, 'r', encoding='utf-8')
         data = ', '.join(fh.readlines())
         fh.close()
         self.assertTrue(self.cleaner._hn2db(self.cleaner.hostname) in data)
@@ -315,7 +312,7 @@ class SOSCleanerTests(unittest.TestCase):
     def test31_create_ip_report(self):
         self.cleaner._ip4_2_db('192.168.122.100')
         self.cleaner._create_ip_report()
-        fh = open(self.cleaner.ip_report, 'r')
+        fh = open(self.cleaner.ip_report, 'r', encoding='utf-8')
         x = fh.readlines()
         self.assertTrue('192.168.122.100' in x[1])
 
@@ -538,7 +535,7 @@ class SOSCleanerTests(unittest.TestCase):
         mac_addy = '00:0c:29:64:72:3e'
         o_mac = self.cleaner._mac2db(mac_addy)
         self.cleaner._create_mac_report()
-        fh = open(self.cleaner.mac_report, 'r')
+        fh = open(self.cleaner.mac_report, 'r', encoding='utf-8')
         data = fh.readlines()
         fh.close()
         report_data = data[1].split(',')
@@ -547,7 +544,7 @@ class SOSCleanerTests(unittest.TestCase):
 
     def test59_mac_report_empty(self):
         self.cleaner._create_mac_report()
-        fh = open(self.cleaner.mac_report, 'r')
+        fh = open(self.cleaner.mac_report, 'r', encoding='utf-8')
         data = fh.readlines()
         fh.close()
         self.assertTrue('None,None' in data[1])
@@ -556,7 +553,7 @@ class SOSCleanerTests(unittest.TestCase):
         self.cleaner.keywords_file = ['testdata/keyword2.txt']
         self.cleaner._keywords2db()
         self.cleaner._create_kw_report()
-        fh = open(self.cleaner.kw_report, 'r')
+        fh = open(self.cleaner.kw_report, 'r', encoding='utf-8')
         data = fh.readlines()
         fh.close()
         report_data = data[1].split(',')
@@ -566,7 +563,7 @@ class SOSCleanerTests(unittest.TestCase):
 
     def test61_kw_report_empty(self):
         self.cleaner._create_kw_report()
-        fh = open(self.cleaner.kw_report, 'r')
+        fh = open(self.cleaner.kw_report, 'r', encoding='utf-8')
         data = fh.readlines()
         fh.close()
         self.assertTrue('None,None' in data[1])
@@ -575,7 +572,7 @@ class SOSCleanerTests(unittest.TestCase):
         """Edited for #129: obfuscateduserX is now randomized"""
         self.cleaner._user2db('user1')
         self.cleaner._create_un_report()
-        fh = open(self.cleaner.un_report, 'r')
+        fh = open(self.cleaner.un_report, 'r', encoding='utf-8')
         data = fh.readlines()
         fh.close()
         user_data = data[1].split(',')
@@ -598,6 +595,7 @@ class SOSCleanerTests(unittest.TestCase):
 
     def test65_test_output_file_mode(self):
         """From issue #90 - artifact modes are 0600"""
+        import stat
         self.cleaner.hostname = 'foo'
         self.cleaner.domainname = 'example.com'
         self.cleaner._domains2db()
@@ -608,17 +606,17 @@ class SOSCleanerTests(unittest.TestCase):
         self.cleaner._create_un_report()
         self.cleaner._create_mac_report()
         self.assertTrue(
-            oct(os.stat(self.cleaner.dn_report).st_mode)[3:] == '0600')
+            stat.S_IMODE(os.stat(self.cleaner.dn_report).st_mode) == 0o600)
         self.assertTrue(
-            oct(os.stat(self.cleaner.ip_report).st_mode)[3:] == '0600')
+            stat.S_IMODE(os.stat(self.cleaner.ip_report).st_mode) == 0o600)
         self.assertTrue(
-            oct(os.stat(self.cleaner.hn_report).st_mode)[3:] == '0600')
+            stat.S_IMODE(os.stat(self.cleaner.hn_report).st_mode) == 0o600)
         self.assertTrue(
-            oct(os.stat(self.cleaner.kw_report).st_mode)[3:] == '0600')
+            stat.S_IMODE(os.stat(self.cleaner.kw_report).st_mode) == 0o600)
         self.assertTrue(
-            oct(os.stat(self.cleaner.un_report).st_mode)[3:] == '0600')
+            stat.S_IMODE(os.stat(self.cleaner.un_report).st_mode) == 0o600)
         self.assertTrue(
-            oct(os.stat(self.cleaner.mac_report).st_mode)[3:] == '0600')
+            stat.S_IMODE(os.stat(self.cleaner.mac_report).st_mode) == 0o600)
 
     def test66_add_single_keywords(self):
         """from issue #86 - add keywords from cli parameters"""
