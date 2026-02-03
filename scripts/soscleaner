@@ -1,73 +1,9 @@
 #!/usr/bin/env python3
-# SOSCleaner Executable
+# SOSCleaner CLI wrapper script
+# This script is kept for backward compatibility with existing installations.
+# The main CLI logic is now in soscleaner.cli
 
-from soscleaner import SOSCleaner
-import argparse
-import os
-import sys
-
-
-def main():
-
-    parser = argparse.ArgumentParser(
-        description='SOSCleaner - Obfuscate sensitive data in sosreports',
-        usage='%(prog)s [OPTIONS] /path/to/sosreport'
-    )
-    parser.add_argument('--version', action='version', version='%(prog)s 0.4.4')
-    parser.add_argument("-l", "--log_level", dest="loglevel", default='INFO',
-                            help="The Desired Log Level (default = INFO) Options are DEBUG, INFO, WARNING, ERROR",
-                            metavar="LOGLEVEL")
-    parser.add_argument("-d", "--domain", action="append", default=[], dest="domains",
-                            help="additional domain to obfuscate (optional). use a flag for each additional domain",
-                            metavar="DOMAIN")
-    parser.add_argument("-f", "--file", action="append", default=[], dest="files",
-                            help="additional files to be analyzed in addition to or in exception of sosreport",
-                            metavar="FILES")
-    parser.add_argument("-q", "--quiet", action="store_true", default=False, dest='quiet',
-                            help="disable output to STDOUT")
-    parser.add_argument("-k", "--keyword", action="append", default=[], dest="keywords",
-                            help="additional keywords to obfuscate. use multiple times for multiple keywords",
-                            metavar="KEYWORD")
-    parser.add_argument("-K", "--keywords_file", action="store", dest="keywords_file",
-                            help="line-delimited list of keywords to obfuscate",
-                            metavar="KEYWORDS_FILE")
-    parser.add_argument("-H", "--hostname-path", action="store", default="hostname", dest="hostname_path",
-                            help="optional path to hostname file.",
-                            metavar="HOSTNAMEPATH")
-    parser.add_argument("-n", "--network", action="append", default=[], dest="networks",
-                            help="networks to be obfuscated (optional). by default it looks through known routes to generate a list from a sosreport",
-                            metavar="NETWORK")
-    parser.add_argument("-u", "--user", action="append", default=[], dest="users",
-                            help="additional usernames to obfuscate in the sosreport or dataset - one user per flag",
-                            metavar="USER")
-    parser.add_argument("-U", "--users-file", action="store", dest="users_file",
-                            help="line-delimited list of users to obfuscate",
-                            metavar="USERS_FILE")
-    parser.add_argument("-o", "--output-dir", action="store", default="/tmp", dest="report_dir",
-                            help="Directory to store soscleaner obfuscated sosreport or dataset",
-                            metavar="DIRECTORY")
-    parser.add_argument("-m", "--macs", action="store_true", default=False, dest='obfuscate_macs',
-                            help="enable MAC address obfuscation")
-    parser.add_argument('sosreport', nargs='?', default=None,
-                            help='Path to sosreport tarball or directory')
-
-    options = parser.parse_args()
-    if not options.sosreport and not options.files:  # we don't have an sosreport
-        parser.print_help()
-        sys.exit(1)
-
-    cleaner = SOSCleaner(quiet=options.quiet)
-
-    sosreport = None
-    if options.sosreport:
-        if os.path.isfile(options.sosreport) or os.path.isdir(options.sosreport):
-            sosreport = options.sosreport
-        else:
-            print("ERROR: No presence of an existing file to sanitize detected")
-            sys.exit(1)
-
-    cleaner.clean_report(options, sosreport)
-
+from soscleaner.cli import main
 
 if __name__ == '__main__':
     main()
