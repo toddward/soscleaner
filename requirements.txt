@@ -1,10 +1,8 @@
-ipaddr
-python_coveralls
+# Runtime dependencies
+# (none - soscleaner uses only stdlib)
+
+# Test dependencies
+pytest>=7.0
+pytest-cov>=4.0
 coveralls
-coveralls[yaml]
 coverage
-nose
-copr-cli
-simplejson
-bumpversion
-mkdocs

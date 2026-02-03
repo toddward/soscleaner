@@ -1,0 +1,14 @@
+# Development dependencies
+# Install with: pip install -r requirements-dev.txt
+
+# Version management
+bump2version
+
+# Documentation
+mkdocs
+
+# Package building
+build
+
+# Include test dependencies
+-r requirements.txt
