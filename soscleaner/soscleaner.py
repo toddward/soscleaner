@@ -53,17 +53,17 @@ class SOSCleaner:
         self.domainname = None
         self.report_dir = '/tmp'
         self.version = '0.5.0'
-        self.false_positives = [
+        self.false_positives = frozenset([
             'installed-debs',
             'installed_rpms',
             'sos_commands/dpkg',
             'sos_commands/rpm',
             'sos_commands/snappy/snap_list_--all',
             'sos_commands/snappy/snap_--version'
-        ]
+        ])
         self.loglevel = 'INFO'
         self.net_db = list()  # Network Information database
-        self.ip_db = list()
+        self.ip_db = dict()  # {original_ip: obfuscated_ip} - dict for O(1) lookup
         self.default_net = IPv4Network('128.0.0.0/8')
         self.default_netmask = self.default_net.prefixlen
         # we'll have to keep track of how many networks we have so we don't have to count them each time we need to create a new one.
@@ -101,6 +101,42 @@ class SOSCleaner:
         self.config_file = '/etc/soscleaner.conf'
         self._read_early_config_options()
         self.obfuscate_macs = True  # issue #98
+
+        # Pre-compiled regex patterns for performance
+        # These patterns are used millions of times during processing,
+        # so compiling them once provides significant speedup
+        self._ip_pattern = re.compile(
+            r"(((\b25[0-5]|\b2[0-4][0-9]|\b1[0-9][0-9]|\b[1-9][0-9]|\b[1-9]))"
+            r"(\.(\b25[0-5]|\b2[0-4][0-9]|\b1[0-9][0-9]|\b[1-9][0-9]|\b[0-9])){3})"
+        )
+        self._mac_pattern = re.compile(r'(?:[0-9a-fA-F]:?){12}')
+        self._hostname_pattern = re.compile(r'\b[a-zA-Z0-9-\.]{1,200}\.[a-zA-Z]{1,63}\b')
+
+        # Combined patterns for keyword/user substitution (built after data is loaded)
+        self._kw_pattern = None
+        self._user_pattern = None
+
+    def _build_combined_pattern(self, db):
+        """Build a single compiled regex from all keys in a database dict.
+        This allows matching all keywords/users in a single pass instead of
+        iterating through each one individually.
+        """
+        if not db:
+            return None
+        # Sort by length descending so longer matches take precedence
+        sorted_keys = sorted(db.keys(), key=len, reverse=True)
+        pattern_str = r'\b(' + '|'.join(re.escape(k) for k in sorted_keys) + r')\b'
+        return re.compile(pattern_str, re.IGNORECASE)
+
+    def _build_kw_pattern(self):
+        """Build the combined keyword pattern after keywords are loaded."""
+        if self.kw_db:
+            self._kw_pattern = self._build_combined_pattern(self.kw_db)
+
+    def _build_user_pattern(self):
+        """Build the combined user pattern after users are loaded."""
+        if self.user_db:
+            self._user_pattern = self._build_combined_pattern(self.user_db)
 
     def _check_uid(self):
         """Ensures soscleaner is running as root. This isn't required for soscleaner,
@@ -435,11 +471,23 @@ class SOSCleaner:
         """
 
         try:
-            if self.user_count > 0:    # we have obfuscated keywords to work with
-                for user, o_user in list(self.user_db.items()):
-                    line = re.sub(r'(?i)\b%s\b' % user, o_user, line)
-                    self.logger.debug(
+            if self._user_pattern:
+                # Use pre-built combined pattern for efficient single-pass substitution
+                def replace_user(match):
+                    user = match.group(0)
+                    o_user = self.user_db.get(user)
+                    if o_user:
+                        self.logger.debug(
                             "Obfuscating User - %s > %s", user, o_user)
+                        return o_user
+                    return user
+                line = self._user_pattern.sub(replace_user, line)
+            elif self.user_count > 0:
+                # Fallback for when pattern wasn't pre-built (e.g., direct method calls in tests)
+                for user, o_user in list(self.user_db.items()):
+                    line = re.sub(r'(?i)\b%s\b' % re.escape(user), o_user, line)
+                    self.logger.debug(
+                        "Obfuscating User - %s > %s", user, o_user)
 
             return line
 
@@ -555,8 +603,7 @@ class SOSCleaner:
         line
         """
         try:
-            pattern = r"(((\b25[0-5]|\b2[0-4][0-9]|\b1[0-9][0-9]|\b[1-9][0-9]|\b[1-9]))(\.(\b25[0-5]|\b2[0-4][0-9]|\b1[0-9][0-9]|\b[1-9][0-9]|\b[0-9])){3})"
-            ips = [each[0] for each in re.findall(pattern, line)]
+            ips = [each[0] for each in self._ip_pattern.findall(line)]
             if len(ips) > 0:
                 for ip in ips:
                     new_ip = self._ip4_2_db(ip)
@@ -717,8 +764,8 @@ class SOSCleaner:
             self.logger.con_out('Creating IP Report - %s', ip_report_name)
             ip_report = open(ip_report_name, 'w', encoding='utf-8')
             ip_report.write('Original IP,Obfuscated IP\n')
-            for i in self.ip_db:
-                ip_report.write('%s,%s\n' % (i[0], i[1]))
+            for orig_ip, obf_ip in self.ip_db.items():
+                ip_report.write('%s,%s\n' % (orig_ip, obf_ip))
             ip_report.close()
             os.chmod(ip_report_name, 0o600)
             self.logger.info('Completed IP Report')
@@ -769,8 +816,7 @@ class SOSCleaner:
     def _sub_mac(self, line):
         """Finds potential MAC addresses and obfuscates them in a single line."""
         try:
-            pattern = re.compile(r'(?:[0-9a-fA-F]:?){12}')
-            macs = re.findall(pattern, line)
+            macs = self._mac_pattern.findall(line)
             if len(macs) > 0:
                 for mac in macs:
                     new_mac = self._mac2db(mac)
@@ -954,8 +1000,7 @@ class SOSCleaner:
         unique domain entries.
         """
         self.logger.debug("Processing Line - %s", line)
-        potential_hostnames = re.findall(
-            r'\b[a-zA-Z0-9-\.]{1,200}\.[a-zA-Z]{1,63}\b', line)
+        potential_hostnames = self._hostname_pattern.findall(line)
         try:
             for hostname in potential_hostnames:
                 hostname = hostname.lower()
@@ -996,29 +1041,33 @@ class SOSCleaner:
     #   Filesystem functions   #
     ############################
 
-    def _clean_line(self, line, filename):
+    def _is_false_positive_file(self, filename):
+        """Check if filename should skip IP/hostname obfuscation.
+        Files in self.false_positives are known to generate false positives
+        (e.g., RPM version numbers that look like IPs).
+        """
+        return any(fp in filename for fp in self.false_positives)
+
+    def _clean_line(self, line, skip_obfuscation=False):
         """Returns a line with obfuscations for all covered data types:
-        hostname, ip, user, keyword, and MAC address. The filename is passed in
-        so we can know whether or not to obfuscate IP addresses. IP obfuscation
-        is excluding in a few files where RPM version numbers cause false
-        positives and are known to not contain IP address information.
+        hostname, ip, user, keyword, and MAC address. The skip_obfuscation flag
+        indicates whether to skip IP/hostname/user obfuscation for files that
+        are known to generate false positives.
+
+        For backward compatibility, if skip_obfuscation is a string (filename),
+        it will be checked against false_positives to determine whether to skip.
         """
 
         try:
-            process_obfuscation = True
-            # We want to skip the files in self.false_positives for all
-            # obfuscation but keywords because they don't have any sensible
-            # info in them and they generate a lot of false positives that
-            # much up the obfuscation and confuse people when they're working
-            # with the files
-            # Issues #60 & #101
-            for false_positive in self.false_positives:
-                if false_positive in filename:
-                    process_obfuscation = False
+            # Handle backward compatibility: if a filename string is passed,
+            # convert it to a boolean skip flag
+            if isinstance(skip_obfuscation, str):
+                skip_obfuscation = self._is_false_positive_file(skip_obfuscation)
+
             new_line = self._sub_keywords(line)  # Keyword Substitution
             if self.obfuscate_macs is True:
                 new_line = self._sub_mac(new_line)  # MAC address obfuscation
-            if process_obfuscation:
+            if not skip_obfuscation:
                 new_line = self._sub_hostname(
                     new_line)  # Hostname substitution
                 new_line = self._sub_ip(new_line)  # IP substitution
@@ -1036,13 +1085,15 @@ class SOSCleaner:
          the obfuscated file in the same location
          """
         if os.path.exists(f) and not os.path.islink(f):
+            # Check once per file if this is a false positive file
+            skip_obfuscation = self._is_false_positive_file(f)
             tmp_file = tempfile.TemporaryFile(mode='w+', encoding='utf-8')
             try:
                 data = self._extract_file_data(f)
                 if len(data) > 0:  # if the file isn't empty:
                     for l in data:
                         self.logger.debug("Obfuscating Line - %s", l)
-                        new_l = self._clean_line(l, f)
+                        new_l = self._clean_line(l, skip_obfuscation)
                         tmp_file.write(new_l)
 
                     tmp_file.seek(0)
@@ -1299,10 +1350,22 @@ class SOSCleaner:
     def _sub_keywords(self, line):
         """Accepts a line from a file in an sosreport and obfuscates any known keyword entries on the line."""
         try:
-            if self.kw_count > 0:    # we have obfuscated keywords to work with
+            if self._kw_pattern:
+                # Use pre-built combined pattern for efficient single-pass substitution
+                def replace_kw(match):
+                    keyword = match.group(0)
+                    o_keyword = self.kw_db.get(keyword)
+                    if o_keyword:
+                        self.logger.debug(
+                            "Obfuscating Keyword - %s > %s", keyword, o_keyword)
+                        return o_keyword
+                    return keyword
+                line = self._kw_pattern.sub(replace_kw, line)
+            elif self.kw_count > 0:
+                # Fallback for when pattern wasn't pre-built (e.g., direct method calls in tests)
                 for keyword, o_keyword in list(self.kw_db.items()):
                     if keyword in line:
-                        line = re.sub(r'\b%s\b' % keyword, o_keyword, line)
+                        line = re.sub(r'\b%s\b' % re.escape(keyword), o_keyword, line)
                         self.logger.debug(
                             "Obfuscating Keyword - %s > %s", keyword, o_keyword)
 
@@ -1478,9 +1541,7 @@ class SOSCleaner:
         is called from within _ip4_2_db
         """
         try:
-            if any(ip in x for x in self.ip_db):
-                return True
-            return False
+            return ip in self.ip_db
 
         except Exception as e:  # pragma: no cover
             self.logger.exception(e)
@@ -1492,22 +1553,17 @@ class SOSCleaner:
         entry, or returns the existing obfuscated IP entry.
         """
         try:
-            if self._ip4_in_db(orig_ip):  # the IP exists already in the database
-                # http://stackoverflow.com/a/18114565/263834
-                data = dict(self.ip_db)
-                # we'll pull the existing obfuscated IP from the database
-                obf_ip = data[orig_ip]
+            if orig_ip in self.ip_db:  # the IP exists already in the database
+                return self.ip_db[orig_ip].compressed
 
-                return obf_ip.compressed
-
-            else:   # it's a new database, so we have to create a new obfuscated IP for the proper network and a new ip_db entry
+            else:   # it's a new IP, so we have to create a new obfuscated IP for the proper network
                 # get the network information
                 net = self._ip4_find_network(orig_ip)
                 self.net_metadata[net.compressed]['host_count'] += 1
                 # take the network and increment the number of hosts to get to the next available IP
                 obf_ip = IPv4Address(
                     net) + self.net_metadata[net.compressed]['host_count']
-                self.ip_db.append((orig_ip, obf_ip))
+                self.ip_db[orig_ip] = obf_ip
 
                 return obf_ip.compressed
 
@@ -1634,6 +1690,9 @@ class SOSCleaner:
         self._domains2db()
         files = self._file_list(self.dir_path)
         self._process_users_file()
+        # Build combined regex patterns for efficient substitution
+        self._build_kw_pattern()
+        self._build_user_pattern()
         self.logger.con_out(
             "IP Obfuscation Network Created - %s", self.default_net.compressed)
         self.logger.con_out("*** SOSCleaner Processing ***")
