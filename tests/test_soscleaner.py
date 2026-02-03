@@ -23,7 +23,7 @@
 from ipaddress import IPv4Network, IPv4Address, IPv6Network, IPv6Address
 import shutil
 import os
-from soscleaner import SOSCleaner
+from soscleaner.soscleaner import SOSCleaner
 import unittest
 
 
