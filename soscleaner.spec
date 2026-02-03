@@ -2,42 +2,57 @@
 
 Summary: To clean and filter sensitive data from a standard sosreport
 Name: soscleaner
-Version: 0.4.4
-Release: 2%{dist}
-Source0: https://github.com/jduncan-rva/%{srcname}/archive/v%{version}-%{release}.tar.gz
-License: GPLv2
+Version: 0.5.0
+Release: 1%{dist}
+Source0: https://github.com/jduncan-rva/%{srcname}/archive/v%{version}.tar.gz
+License: GPLv2+
 BuildArch: noarch
 Requires: file
-Requires: python-ipaddr
-BuildRequires: python-setuptools
+Requires: python3 >= 3.8
+BuildRequires: python3-devel
+BuildRequires: python3-setuptools
+BuildRequires: python3-pytest
 BuildRequires: file
-BuildRequires: python-ipaddr
-Url: https://github.com/jduncan-rva/SOSCleaner
+Url: https://github.com/jduncan-rva/soscleaner
 
 %if 0%{?srpm_build}
 %undefine dist
 %endif
 
 %description
-SOSCleaner helps filter out controlled or sensitive data from an SOSReport
+SOSCleaner helps filter out controlled or sensitive data from an SOSReport.
+It consistently replaces sensitive information (IPs, hostnames, MACs, usernames,
+keywords) with obfuscated values while maintaining data relationships for
+debugging purposes.
 
 %prep
 %autosetup -n %{srcname}-%{version}
 
 %check
-%{__python2} setup.py test
+%{__python3} -m pytest -v
 
 %build
-%{__python2} setup.py build
+%{__python3} setup.py build
 
 %install
-%py2_install
+%py3_install
 
 %files
-%{python2_sitelib}/%{name}*
+%license LICENSE
+%doc README.md
+%{python3_sitelib}/%{name}/
+%{python3_sitelib}/%{name}-%{version}*
 %{_bindir}/soscleaner
 
 %changelog
+* Mon Feb 03 2025 Jamie Duncan <jduncan@redhat.com> 0.5.0-1
+- Migrated to Python 3 (Python 2.7 no longer supported)
+- Removed python-ipaddr dependency (using stdlib ipaddress)
+- Migrated from optparse to argparse
+- Migrated from nose to pytest
+- Added pyproject.toml for modern packaging
+- Migrated CI from Travis CI to GitHub Actions
+
 * Tue Nov 27 2018 Jamie Duncan <jduncan@redhat.com> 0.3.0-2
 - minor tweaks to spec file and setup.py in prep for 0.3.1
 - working to get copr builds working again
