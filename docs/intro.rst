@@ -21,7 +21,7 @@ Project Tracking  :github_project_url:`Github <1>`
 RPMs              :rpm_url:`Fedora Copr <soscleaner>`
 Python Packages   :pypi_url:`PyPi <soscleaner>`
 Code Coverage     :code_coverage_url:`Coveraalls <soscleaner>`
-CI/CD             :ci_cd_url:`Travis-CI <soscleaner>`
+CI/CD             :ci_cd_url:`GitHub Actions <soscleaner>`
 ================  ====================
 
 Obfuscated data types

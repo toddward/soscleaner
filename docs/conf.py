@@ -19,9 +19,9 @@ copyright = u'2019, Jamie Duncan'
 author = u'Jamie Duncan'
 
 # The short X.Y version
-version = u'0.4.4'
+version = u'0.5.0'
 # The full version, including alpha/beta/rc tags
-release = u'0.4.4'
+release = u'0.5.0'
 
 
 # -- General configuration ---------------------------------------------------
@@ -90,7 +90,7 @@ extlinks = {
     'github_issues_url': ('https://github.com/jduncan-rva/soscleaner/issues/%s', 'GitHub '),
     'github_project_url': ('https://github.com/jduncan-rva/soscleaner/projects/%s/', 'Github '),
     'dev_group_url': ('https://groups.google.com/forum/#!forum/%s/', 'SOSCleaner mailing list'),
-    'ci_cd_url': ('https://travis-ci.com/jduncan-rva/%s/', 'Travis CI/CD'),
+    'ci_cd_url': ('https://github.com/jduncan-rva/%s/actions', 'GitHub Actions'),
     'rpm_url': ('https://copr.fedorainfracloud.org/coprs/jduncan/%s/', 'Fedora Copr '),
     'pypi_url': ('https://pypi.org/project/%s/', 'PyPi '),
     'code_coverage_url': ('https://coveralls.io/github/jduncan-rva/%s/', 'SOSCleaner'),
